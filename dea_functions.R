@@ -2,50 +2,6 @@ library(Benchmarking)
 library(tidyverse)
 
 
-# get data from database ----
-get.data.from.db <- function(con, q1, q2, q3, uhk.ozellik, uhk.mahalle.ses.kume){
-  
-  # NW_VERIMLILIK_LKP_PARAM
-  if(dbExistsTable(con, "NW_VERIMLILIK_LKP_PARAM") == TRUE){
-    q1.drop <- "DROP TABLE ABI_MURATO_OPET.NW_VERIMLILIK_LKP_PARAM"
-    rs.q1.drop <- dbSendQuery(con, q1.drop)
-    rs.q1 <- dbSendQuery(con, q1)
-  } else{
-    rs.q1 <- dbSendQuery(con, q1)
-  }
-  
-  # ANALIZ_DONEM_ALV
-  if(dbExistsTable(con, "ANALIZ_DONEM_ALV") == TRUE){
-    q2.drop <- "DROP TABLE ABI_MURATO_OPET.ANALIZ_DONEM_ALV"
-    rs.q2.drop <- dbSendQuery(con, q2.drop)
-    rs.q2 <- dbSendQuery(con, q2)
-  } else{
-    rs.q2 <- dbSendQuery(con, q2)
-  }
-  
-  # uhk gunluk hacim
-  rs.q3 <- dbSendQuery(con, q3)
-  uhk.gunluk.hacim.df <- fetch(rs.q3)
-  uhk.gunluk.hacim.df <- tibble(uhk.gunluk.hacim.df)
-  
-  # uhk ozellik
-  rs <- dbSendQuery(con, uhk.ozellik)
-  uhk.ozellik.df <- fetch(rs)
-  uhk.ozellik.df <- tibble(uhk.ozellik.df)
-  
-  # uhk mahalle ses kume
-  rs <- dbSendQuery(con, uhk.mahalle.ses.kume)
-  uhk.mahalle.ses.kume.df <- fetch(rs)
-  uhk.mahalle.ses.kume.df <- tibble(uhk.mahalle.ses.kume.df)
-  
-  # list of datasets
-  result <- list(uhk.gunluk.hacim.df = uhk.gunluk.hacim.df, uhk.ozellik.df=uhk.ozellik.df, uhk.mahalle.ses.kume.df=uhk.mahalle.ses.kume.df)
-  
-  return(result)
-}
-
-
-
 # merge and split dataset ----
 merge.and.split.datasets <- function(.df1, .df2, .df3, input.list){
   
@@ -56,22 +12,22 @@ merge.and.split.datasets <- function(.df1, .df2, .df3, input.list){
   
   # merge datasets
   df <- .df1 %>% 
-    inner_join(.df2, by="UHK") %>% 
-    inner_join(.df3, by="UHK")
+    inner_join(.df2, by="SKU") %>% 
+    inner_join(.df3, by="SKU")
   
   # split datasets
   
   # filter data and select inputs
   sehirici <- df %>% 
-    filter((SEHIRICI == 1) & (KUME != "Otobil_Oran_Yuksek")) %>% 
+    filter((SEHIRICI == 1)) %>% 
     select_(.dots = input.list)
   
-  # sehirici uhk list
-  sehirici.uhk <- sehirici$UHK
+  # sehirici SKU list
+  sehirici.SKU <- sehirici$SKU
   
   # filter data and select inputs
   sehirlerarasi <- df %>% 
-    filter(!UHK %in% sehirici.uhk) %>% 
+    filter(!SKU %in% sehirici.SKU) %>% 
     select_(.dots = input.list)
   
   result <- list(sehirici=sehirici, sehirlerarasi=sehirlerarasi)
@@ -240,12 +196,12 @@ iterated.grouped.dea.func <- function(df, threshold=0.5, iteration=1, ...){
     }else{
       most.eff.list[[i]] <- most.eff.firms
     }
-    most.eff.uhk <- most.eff.firms$UHK
-    most.eff.firm.list[[i]] <- most.eff.uhk
+    most.eff.SKU <- most.eff.firms$SKU
+    most.eff.firm.list[[i]] <- most.eff.SKU
     
-    df <- df %>% filter(!UHK %in% most.eff.uhk)
-    df <- df %>% select(UHK, KUME, MARKA_ADET_3KM, MARKA_ADET_3KM_BIG3, POTANSIYEL, KONFOR, KAPASITE, MAHALLE, GUNLUK_HACIM)
-    df <- add.cluster.and.index(.data = df, group.var = KUME, arrange.var = UHK)
+    df <- df %>% filter(!SKU %in% most.eff.SKU)
+    df <- df %>% select(SKU, KUME, MARKA_ADET_3KM, MARKA_ADET_3KM_BIG3, POTANSIYEL, KONFOR, KAPASITE, MAHALLE, GUNLUK_HACIM)
+    df <- add.cluster.and.index(.data = df, group.var = KUME, arrange.var = SKU)
     i = i+1
   }
     
@@ -255,8 +211,8 @@ iterated.grouped.dea.func <- function(df, threshold=0.5, iteration=1, ...){
   most.eff <- do.call("rbind", most.eff.list)
   most.eff$INDEX <- 0
   most.eff$BENCHMARK <- 0
-  most.eff.uhk <- most.eff$UHK
-  #result.loop <- result.loop %>% filter(!UHK %in% most.eff.uhk)
+  most.eff.SKU <- most.eff$SKU
+  #result.loop <- result.loop %>% filter(!SKU %in% most.eff.SKU)
   
   # concat dataframes
   result <- bind_rows(result.loop, most.eff)
@@ -271,14 +227,14 @@ iterated.grouped.dea.func <- function(df, threshold=0.5, iteration=1, ...){
 post.process.data <- function(.result, .raw.data){
   
   df1 <- .result %>%
-    select(INDEX, UHK, KUME, GUNLUK_HACIM, PROJEKSIYON, ETKINLIK,
+    select(INDEX, SKU, KUME, GUNLUK_HACIM, PROJEKSIYON, ETKINLIK,
            BENCHMARK_SAYI, REFERANS, LAMDALAR, BENCHMARK_ORAN)
   
   df2 <- df1 %>% 
-    inner_join(.raw.data, by="UHK")
+    inner_join(.raw.data, by="SKU")
   
   df2 <- df2 %>% 
-    rename(KUME_ICI_UHK_NO=INDEX, KUME_ICI_BENCHMARK_UHK_NO=REFERANS, BENCHMARK_AGIRLIK=LAMDALAR) %>% 
+    rename(KUME_ICI_SKU_NO=INDEX, KUME_ICI_BENCHMARK_SKU_NO=REFERANS, BENCHMARK_AGIRLIK=LAMDALAR) %>% 
     mutate(
       VERIMLI_MI = if_else(ETKINLIK == 1, 1, 0),
       ARTIS_ORAN = round((PROJEKSIYON / GUNLUK_HACIM) - 1, 2)
@@ -292,6 +248,8 @@ post.process.data <- function(.result, .raw.data){
   return(df2)
   
 }
+  
+  
   
   
   
