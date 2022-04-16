@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>İşletmeler için Uçtan Uca Verimlilik Analizi</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Murat Öztürkmen &amp; Hüseyin Budak" />
+    <script src="libs/header-attrs-2.10/header-attrs.js"></script>
+    <script src="libs/htmlwidgets-1.5.4/htmlwidgets.js"></script>
+    <link href="libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+    <script src="libs/datatables-binding-0.19/datatables.js"></script>
+    <script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+    <link href="libs/dt-core-1.10.20/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="libs/dt-core-1.10.20/css/jquery.dataTables.extra.css" rel="stylesheet" />
+    <script src="libs/dt-core-1.10.20/js/jquery.dataTables.min.js"></script>
+    <link href="libs/crosstalk-1.1.1/css/crosstalk.css" rel="stylesheet" />
+    <script src="libs/crosstalk-1.1.1/js/crosstalk.min.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+layout:true
+
+---
+
+name: xaringan-title
+class: left, middle
+background-image: url(img/dea4.jpg)
+background-size: cover
+
+# İşletmeler için Uçtan Uca Verimlilik Analizi
+
+&lt;img src="img/logo200.png" alt="Sharingan" width="180" /&gt;
+
+### .fancy[benchmarking ve tidyverse]
+
+.large[ Murat Öztürkmen | Hüseyin Budak ]
+
+.large[ whyr::Turkey | 2022-04-16 ]
+
+---
+
+# Motivasyon: Veri Zarflama Analizi
+
+- Bazen sınır analizi olarak da adlandırılan veri zarflama analizi (VZA), ilk olarak 1978'de Charnes, Cooper ve Rhodes tarafından ortaya atılmıştır. 
+--
+
+- Kuruluşlardaki karar verme birimlerinin (decision making units-DMU) göreceli etkinliğini değerlendirmek için kullanılabilecek bir performans ölçüm tekniğidir. 
+--
+
+- Burada bir KVB, aldığı bazı kararlarla ilgili olarak esnekliğe sahip olan, ancak bu kararlarla ilgili olarak mutlak özgürlüğe sahip olmayan bir kuruluş içinde ayrı bir birimdir.
+--
+
+- VZA'nın uygulandığı bu tür birimlere örnekler: bankalar, karakollar, hastaneler, vergi daireleri, cezaevleri, savunma üsleri (kara, deniz, hava kuvvetleri), okullar ve üniversite bölümleri.
+--
+
+- VZA'nın bir avantajının da kar amacı gütmeyen kuruluşlara uygulanabilmesi olduğuna dikkat edin.
+
+---
+
+# Motivasyon: Veri Zarflama Analizi
+
+- Bir üretim veya maliyet fonksiyonunun önceden belirlenmesini gerektiren parametrik yöntemlerin aksine, parametrik olmayan yaklaşımlar, yalnızca mevcut verilere dayalı olarak uygulanabilir girdi ve çıktı kombinasyonlarını karşılaştırır.
+--
+
+- En yaygın olarak kullanılan parametrik olmayan yöntemlerden biri olan VZA, adını, ampirik olarak gözlemlenen, en verimli KVB'lerin, tüm KVB'lerin karşılaştırılacağı üretim sınırını oluşturduğu veri kümesinin verimli KVB'lerini sarmalama özelliğine borçludur.
+
+---
+
+# Çalışma Yöntemi
+
+- Bu çalışmada, birden fazla ana küme ve alt küme kırılımında, her bir kümenin kendi içerisinde yer alan şubeler homojenlikleri doğrultusunda aynı girdi ve çıktılar bakımından iteratif bir şekilde verimlilik analizine dahil edilmiştir.
+--
+
+- Veri kümesi olarak çok şubeli bir firmanın verileri çalışmanın konusu olmuştur. 
+--
+
+- Çıktı olarak günlük ciro ve girdi olarak da sosyoekonomik veriler ile şube bazlı veriler analize dahil edilmiştir. 
+--
+
+- Çalışmada farklı üst bölgeler ayrımında iki grup şube için analizler gerçekleştirilmiştir.
+--
+
+- İlk bölge grubunda 20 kümede toplam 740 şube için verimlilik analizi gerçekleştirilirken, ikinci bölge grubunda ise 5 kümede toplam 360 şube için verimlilik analizi gerçekleştirilmiştir.
+
+---
+
+class: center, inverse
+background-image: url("https://media1.tenor.com/images/cb27704982766b4f02691ea975d9a259/tenor.gif?itemid=11365139")
+background-position: center
+background-size: contain
+
+---
+
+# benchmarking
+
+.pull-left[
+
+- Peter Bogetoft and Lars Otto (2020)
+
+- Benchmark and Frontier Analysis Using DEA and SFA
+
+
+```r
+library(Benchmarking)
+
+x &lt;- matrix(c(100,200,300,500,100,200,600),ncol=1)
+y &lt;- matrix(c(75,100,300,400,25,50,400),ncol=1)
+dea.plot.frontier(x,y,txt=TRUE)
+```
+
+]
+
+.pull-right[
+
+![](sunum_files/figure-html/unnamed-chunk-2-1.png)&lt;!-- --&gt;
+
+]
+
+---
+
+# benchmarking
+
+.pull-left[
+
+
+```r
+e &lt;- dea(x,y)
+eff(e)
+print(e)
+summary(e)
+lambda(e)
+
+# Input savings potential for each firm
+(1-eff(e)) * x
+(1-e$eff) * x
+```
+
+]
+
+.pull-right[
+
+
+```r
+# calculate slacks
+el &lt;- dea(x,y,SLACK=TRUE)
+data.frame(e$eff,el$eff,el$slack,el$sx,el$sy)
+
+# Fully efficient units, eff==1 and no slack
+which(eff(e) == 1 &amp; !el$slack)
+
+# fdh+ with limits in the interval [.7, 1.2]
+dea(x,y,RTS="fdh+", param=c(.7,1.2))
+```
+
+]
+
+---
+
+class: center, inverse
+background-image: url("https://i1.wp.com/github.com/dgrapov/TeachingDemos/raw/master/Demos/dplyr/images/BD_wasted.gif?w=578&amp;ssl=1")
+background-position: center
+background-size: contain
+
+---
+
+
+# tidyverse
+
+&lt;img src="img/tdv.PNG" alt="Sharingan"/&gt;
+
+---
+
+class: center, inverse
+background-image: url("https://i1.wp.com/github.com/dgrapov/TeachingDemos/raw/master/Demos/dplyr/images/AD_wasted.gif?w=578&amp;ssl=1")
+background-position: center
+background-size: contain
+
+---
+
+# tidy-benchmarking
+
+Veri seti:
+
+<div id="htmlwidget-448e19a447a6ec996dc6" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-448e19a447a6ec996dc6">{"x":{"filter":"none","vertical":false,"fillContainer":true,"data":[["1","2","3","4","5","6","7","8","9","10"],[1,2,3,4,5,6,7,8,9,10],[1,1,1,1,1,1,1,1,1,1],[20,20,20,20,20,20,20,20,20,20],["KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1"],[1,2,3,4,5,6,7,8,9,10],[1,7,29,7,7,10,13,25,18,12],[1,1,16,6,5,8,11,15,10,9],[35,16,50,78,35,35,35,35,35,35],[223,207,442,606,447,476,367,367,387,527],[204073.619434703,153252.499422615,266062.602534166,345550.413867907,295349.925420017,349426.617753285,331375.978736125,213909.957241806,229701.945737991,304066.532566021],[161,89,668,1166,425,692,531,305,381,636],[1875.00384615385,974.797252747253,7149.61604395604,12458.9447252747,5939.29032967033,6216.21703296703,4376.51967032967,3213.74989010989,3744.57494505495,6272.18120879121]],"container":"<table class=\"display fill-container\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>INDEX<\/th>\n      <th>KUME_N<\/th>\n      <th>KUME_S<\/th>\n      <th>KUME<\/th>\n      <th>DMU<\/th>\n      <th>X1<\/th>\n      <th>X2<\/th>\n      <th>X3<\/th>\n      <th>X4<\/th>\n      <th>X5<\/th>\n      <th>X6<\/th>\n      <th>Y<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":4,"columnDefs":[{"className":"dt-right","targets":[1,2,3,5,6,7,8,9,10,11,12]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[4,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+
+---
+
+# tidy-benchmarking
+
+
+```r
+# inputs
+input.vars.bolge1 &lt;- c("X1", "X2", "X3", "X4", "X5", "X6")
+
+# outputs
+output.var &lt;- "Y"
+
+*bolge1.sonuc &lt;- iterated.grouped.dea.func(bolge1,
+                                          threshold = 0.4, 
+                                          iteration = 3, 
+                                          input.vars.bolge1, 
+                                          output.var, 
+                                          group.col = "KUME_N", 
+                                          subgroup.col = "INDEX")
+```
+
+---
+
+# tidy-benchmarking
+
+Sonuçlar:
+
+<div id="htmlwidget-d10a9234a108036adaa7" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-d10a9234a108036adaa7">{"x":{"filter":"none","vertical":false,"fillContainer":true,"data":[["1","2","3","4","5","6","7","8","9","10"],[0,0,0,0,0,0,0,0,1,1],[11,2,4,5,18,55,95,6,1,1],["KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1","KUME1"],[5537.64527472527,974.797252747253,12458.9447252747,5939.29032967033,2875.80758241758,9542.2521978022,8264.12054945055,7433.25846153846,1875.00384615385,3403.06802197802],[5538,975,12459,5939,2876,9542,8264,7433,1875,4902],[13,10,12,9,8,44,48,46,6,0],["11","2","4","5","17","55","95","6","1","71_72_87_89"],["1","1","1","1","1","1","1","1","1","0.13_0.5_0.29_0.08"],[0.65,0.53,0.63,0.47,0.42,0.46,0.51,0.49,0.4,null],[1,1,1,1,1,1,1,1,1,0],[0,0,0,0,0,0,0,0,0,0.44]],"container":"<table class=\"display fill-container\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>KUME_ICI_DMU_NO<\/th>\n      <th>DMU<\/th>\n      <th>KUME<\/th>\n      <th>Y<\/th>\n      <th>PROJEKSIYON<\/th>\n      <th>BENCHMARK_SAYI<\/th>\n      <th>KUME_ICI_BENCHMARK_DMU_NO<\/th>\n      <th>BENCHMARK_AGIRLIK<\/th>\n      <th>BENCHMARK_ORAN<\/th>\n      <th>VERIMLI_MI<\/th>\n      <th>ARTIS_ORAN<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":4,"lengthMenu":[[10,25,50,-1],["10","25","50","All"]],"fillContainer":true,"scrollX":true,"columnDefs":[{"className":"dt-right","targets":[1,2,4,5,6,9,10,11]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+
+
+---
+
+# Dinamik Raporlama
+
+&lt;iframe src="verimlilik.html" width="100%" height="400px"&gt;&lt;/iframe&gt;
+
+
+---
+
+class: center
+
+# Teşekkürler 😺
+
+
+.pull-left[
+
+&lt;img class="circle" src="img/murat.jpeg" width="150px" height="180px"/&gt;
+
+### Dr. Murat Öztürkmen
+#### Principal Data Scientist
+#### GTech
+
+[<svg aria-hidden="true" role="img" viewBox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg> /in/mozturkmen](http://linkedin.com/in/mozturkmen)  
+
+]
+
+.pull-right[
+
+&lt;img class="circle" src="img/huseyin.jfif" width="150px" height="180px"/&gt;
+
+### Dr. Hüseyin Budak
+#### Lead Data Scientist
+#### Consultant
+
+[<svg aria-hidden="true" role="img" viewBox="0 0 448 512" style="height:1em;width:0.88em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:currentColor;overflow:visible;position:relative;"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg> /in/huseyin-budak/](http://linkedin.com/in/huseyin-budak/)  
+
+]
+
+
+
+
+
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
